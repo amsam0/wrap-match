@@ -31,7 +31,7 @@ log = "*"
 
 Now you can use the `wrap_match` attribute macro:
 
-```rs
+```
 #[wrap_match::wrap_match]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error)?; // notice the ?; when the macro is expanded, it will be modified to include line number and expression
@@ -41,7 +41,7 @@ fn my_function() -> Result<(), CustomError> {
 
 This would expand to something like this (comments are not included normally):
 
-```rs
+```
 fn my_function() -> Result<(), CustomError> {
     struct _wrap_match_error<E> {
         line_and_expr: Option<(u32, String)>,
@@ -107,7 +107,7 @@ Default value: `Successfully ran {function}`
 
 Example:
 
-```rs
+```
 #[wrap_match::wrap_match(success_message = "{function} ran successfully!! 🎉🎉")]
 fn my_function() -> Result<(), CustomError> {
     Ok(())
@@ -135,7 +135,7 @@ Default value: `` An error occurred when running {function} (caused by `{expr}` 
 
 Example:
 
-```rs
+```
 #[wrap_match::wrap_match(error_message = "oh no, {function} failed! `{expr}` on line {line} caused the error: {error:?}")]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error)?;
@@ -162,7 +162,7 @@ Default value: `An error occurred when running {function}: {error:?}`
 
 Example:
 
-```rs
+```
 #[wrap_match::wrap_match(error_message_without_info = "oh no, {function} failed with this error: {error:?}")]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error.into())
@@ -183,7 +183,7 @@ Default value: `true`
 
 Example:
 
-```rs
+```
 #[wrap_match::wrap_match(log_success = false)]
 fn my_function() -> Result<(), CustomError> {
     Ok(())
