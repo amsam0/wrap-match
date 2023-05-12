@@ -1,0 +1,5 @@
+error: wrap_match: unknown configuration option (expected `success_message`, `error_message`, `error_message_without_info`, or `log_success`)
+ --> tests/ui/invalid-option-name.rs:3:26
+  |
+3 | #[wrap_match::wrap_match(option = 1)]
+  |                          ^^^^^^

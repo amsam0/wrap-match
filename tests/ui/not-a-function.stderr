@@ -1,0 +1,5 @@
+error: expected `fn`
+ --> tests/ui/not-a-function.rs:4:1
+  |
+4 | struct NotAFunction;
+  | ^^^^^^

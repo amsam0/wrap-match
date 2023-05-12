@@ -1,0 +1,23 @@
+error[E0277]: `Error` doesn't implement `std::fmt::Debug`
+ --> tests/ui/no-debug-display.rs:5:1
+  |
+5 | #[wrap_match::wrap_match(error_message = "{error:?}")]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Error` cannot be formatted using `{:?}`
+  |
+  = help: the trait `std::fmt::Debug` is not implemented for `Error`
+  = note: add `#[derive(Debug)]` to `Error` or manually `impl std::fmt::Debug for Error`
+  = note: this error originates in the macro `format_args` which comes from the expansion of the attribute macro `wrap_match::wrap_match` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider annotating `Error` with `#[derive(Debug)]`
+  |
+3 | #[derive(Debug)]
+  |
+
+error[E0277]: `Error` doesn't implement `std::fmt::Display`
+  --> tests/ui/no-debug-display.rs:11:1
+   |
+11 | #[wrap_match::wrap_match(error_message = "{error}", error_message_without_info = "")]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Error` cannot be formatted with the default formatter
+   |
+   = help: the trait `std::fmt::Display` is not implemented for `Error`
+   = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
+   = note: this error originates in the macro `format_args` which comes from the expansion of the attribute macro `wrap_match::wrap_match` (in Nightly builds, run with -Z macro-backtrace for more info)

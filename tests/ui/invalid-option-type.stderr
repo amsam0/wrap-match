@@ -1,0 +1,11 @@
+error: expected string literal
+ --> tests/ui/invalid-option-type.rs:3:44
+  |
+3 | #[wrap_match::wrap_match(success_message = true)]
+  |                                            ^^^^
+
+error: expected boolean literal
+ --> tests/ui/invalid-option-type.rs:9:40
+  |
+9 | #[wrap_match::wrap_match(log_success = "true")]
+  |                                        ^^^^^^

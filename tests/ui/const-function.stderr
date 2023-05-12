@@ -1,0 +1,5 @@
+error: wrap_match cannot be used on const functions because the log crate cannot be used in const contexts
+ --> tests/ui/const-function.rs:4:1
+  |
+4 | const fn const_function() -> Result<(), ()> {
+  | ^^^^^
