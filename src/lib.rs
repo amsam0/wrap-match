@@ -194,8 +194,8 @@ This would log nothing.
 wrap-match currently has the following limitations:
 
 1.  ~~wrap-match cannot be used on functions in implementations that take a `self` parameter. If you need support for this, please create a GitHub issue with your use case.~~ This is now supported!
-    However, it does require wrap-match to move the inner function out of the generated one, so it will add a new method to the implementation. This method is marked as deprecated and is not shown in
-    documentation. Hopefully this won't cause any issues.
+    However, it does require wrap-match to move the inner function out of the generated one, so it will add a new method to the implementation. This method is marked as deprecated, made private, and
+    is not shown in documentation. Hopefully this won't cause any issues.
 
 1.  wrap-match only supports `Result`s. If you need support for `Option`s, please create a GitHub issue with your use case.
 
