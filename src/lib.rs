@@ -33,7 +33,6 @@ Now you can use the `wrap_match` attribute macro:
 
 ```
 # #[derive(Debug)] enum CustomError { Error }
-
 #[wrap_match::wrap_match]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error)?; // notice the ?; when the macro is expanded, it will be modified to include line number and expression
@@ -47,7 +46,6 @@ This would expand to something like this (comments are not included normally):
 ```
 # use wrap_match::__private::WrapMatchError; // don't use this! it's just to get it to compile
 # #[derive(Debug)] enum CustomError { Error }
-
 fn my_function() -> Result<(), CustomError> {
     // This is where the original function is
     fn _wrap_match_inner_my_function() -> Result<(), WrapMatchError<CustomError>> {
@@ -104,7 +102,6 @@ Example:
 
 ```
 # #[derive(Debug)] enum CustomError { Error }
-
 #[wrap_match::wrap_match(success_message = "{function} ran successfully!! 🎉🎉")]
 fn my_function() -> Result<(), CustomError> {
     Ok(())
@@ -134,7 +131,6 @@ Example:
 
 ```
 # #[derive(Debug)] enum CustomError { Error }
-
 #[wrap_match::wrap_match(error_message = "oh no, {function} failed! `{expr}` on line {line} caused the error: {error:?}")]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error)?;
@@ -163,7 +159,6 @@ Example:
 
 ```
 # #[derive(Debug)] enum CustomError { Error }
-
 #[wrap_match::wrap_match(error_message_without_info = "oh no, {function} failed with this error: {error:?}")]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error.into())
@@ -186,7 +181,6 @@ Example:
 
 ```
 # #[derive(Debug)] enum CustomError { Error }
-
 #[wrap_match::wrap_match(log_success = false)]
 fn my_function() -> Result<(), CustomError> {
     Ok(())
