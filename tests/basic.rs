@@ -10,10 +10,12 @@ fn basic_wrapper() {
     silent_ok().unwrap();
     err().unwrap_err();
     dyn_error().unwrap_err();
-    Test::err().unwrap_err();
-    err_into(false, false).unwrap_err();
+    err_into(false, &false).unwrap_err();
     block_on(unsafe { err_into_async_unsafe(false, false) }).unwrap_err();
     generic::err_into_generic(false, false).unwrap_err();
+    Test::err().unwrap_err();
+    Test.err_self().unwrap_err();
+    err_mut_arg(false).unwrap_err();
 }
 
 #[wrap_match::wrap_match(success_message = "success")]
@@ -52,8 +54,8 @@ fn dyn_error() -> Result<(), Box<dyn Error>> {
 
 #[wrap_match::wrap_match(error_message = "test {function} {error:?} {expr}")]
 #[allow(clippy::let_unit_value)]
-fn err_into(_arg1: bool, _arg2: bool) -> Result<(), CustomError> {
-    let _ = generic::err_into_generic(false, _arg2)?;
+fn err_into(_arg1: bool, _arg2: &bool) -> Result<(), CustomError> {
+    let _ = generic::err_into_generic(false, _arg2.to_owned())?;
     Ok(())
 }
 
@@ -79,4 +81,23 @@ impl Test {
         Err(CustomError::Error)?;
         Ok(())
     }
+
+    #[wrap_match::wrap_match]
+    pub fn err_self(&self) -> Result<(), CustomError> {
+        Err(CustomError::Error)?;
+        Ok(())
+    }
+}
+
+#[wrap_match::wrap_match]
+#[allow(unused_mut)]
+fn err_mut_arg(mut arg1: bool) -> Result<(), CustomError> {
+    err_ref_mut_arg(&mut arg1)?;
+    Err(CustomError::Error)?;
+    Ok(())
+}
+
+#[wrap_match::wrap_match]
+fn err_ref_mut_arg(_arg1: &mut bool) -> Result<(), CustomError> {
+    Ok(())
 }

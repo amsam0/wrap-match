@@ -1,0 +1,11 @@
+error: use of deprecated method `InnerDeprecated::_wrap_match_inner_test`: inner function for wrap-match. Please do not use!
+ --> tests/ui/inner-deprecated.rs:3:21
+  |
+3 |     InnerDeprecated._wrap_match_inner_test().unwrap_err();
+  |                     ^^^^^^^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> tests/ui/inner-deprecated.rs:1:8
+  |
+1 | #[deny(deprecated)]
+  |        ^^^^^^^^^^

@@ -34,6 +34,7 @@ Now you can use the `wrap_match` attribute macro:
 #[wrap_match::wrap_match]
 fn my_function() -> Result<(), CustomError> {
     Err(CustomError::Error)?; // notice the ?; when the macro is expanded, it will be modified to include line number and expression
+    // If you need to return an error, just do `Err(CustomError::Error.into())`
     Ok(())
 }
 ```
@@ -42,26 +43,15 @@ This would expand to something like this (comments are not included normally):
 
 ```rust
 fn my_function() -> Result<(), CustomError> {
-    struct _wrap_match_error<E> {
-        line_and_expr: Option<(u32, String)>,
-        inner: E,
-    }
-
-    // This allows you to return `Err(CustomError::Error.into())`
-    impl<E> From<E> for _wrap_match_error<E> {
-        fn from(inner: E) -> Self {
-            Self { line_and_expr: None, inner }
-        }
-    }
-
     // This is where the original function is
-    fn _wrap_match_inner_my_function() -> Result<(), _wrap_match_error<CustomError>> {
+    fn _wrap_match_inner_my_function() -> Result<(), WrapMatchError<CustomError>> {
         Err(CustomError::Error)
-            .map_err(|e| _wrap_match_error {
+            .map_err(|e| WrapMatchError {
                 // Here, line number and expression are added to the error
                 line_and_expr: Some((3, "Err(CustomError::Error)".to_owned())),
                 inner: e.into(),
             })?;
+        // If you need to return an error, just do `Err(CustomError::Error.into())`
         Ok(())
     }
 
@@ -195,7 +185,9 @@ This would log nothing.
 
 wrap-match currently has the following limitations:
 
-1.  wrap-match cannot be used on functions in implementations that take a `self` parameter. If you need support for this, please create a GitHub issue with your use case.
+1.  ~~wrap-match cannot be used on functions in implementations that take a `self` parameter. If you need support for this, please create a GitHub issue with your use case.~~ This is now supported!
+    However, it does require wrap-match to move the inner function out of the generated one, so it will add a new method to the implementation. This method is marked as deprecated and is not shown in
+    documentation. Hopefully this won't cause any issues.
 
 1.  wrap-match only supports `Result`s. If you need support for `Option`s, please create a GitHub issue with your use case.
 
