@@ -53,7 +53,7 @@ fn my_function() -> Result<(), CustomError> {
             .map_err(|e| WrapMatchError {
                 // Here, line number and expression are added to the error
                 line_and_expr: Some((3, "Err(CustomError::Error)".to_owned())),
-                inner: e.into(),
+                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type
             })?;
         // If you need to return an error, just do `Err(CustomError::Error.into())`
         Ok(())
