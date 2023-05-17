@@ -49,7 +49,7 @@ fn my_function() -> Result<(), CustomError> {
             .map_err(|e| WrapMatchError {
                 // Here, line number and expression are added to the error
                 line_and_expr: Some((3, "Err(CustomError::Error)".to_owned())),
-                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type
+                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type (however, we need to disable the `clippy::useless_conversion` lint to allow this)
             })?;
         // If you need to return an error, just do `Err(CustomError::Error.into())`
         Ok(())
@@ -180,6 +180,35 @@ fn my_function() -> Result<(), CustomError> {
 ```
 
 This would log nothing.
+
+### `disregard_result`
+
+If `true`, the resulting function will return `()` and throw away whatever the `Result` is. Useful for `main` functions.
+
+Default value: `false`
+
+Example:
+
+```rust
+#[wrap_match::wrap_match(disregard_result = true)]
+fn main() -> Result<(), CustomError> {
+    Ok(())
+}
+```
+
+The `main` function would be turned into this:
+
+```rust
+fn main() {
+    fn _wrap_match_inner_main() -> Result<(), WrapMatchError<CustomError>> {
+        Ok(())
+    }
+
+    match _wrap_match_inner_main() {
+        // the Result would be logged like normal, but it is not returned
+    }
+}
+```
 
 ## Limitations
 

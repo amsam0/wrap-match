@@ -14,6 +14,7 @@ fn basic_wrapper() {
     Test::err().unwrap_err();
     Test.err_self().unwrap_err();
     err_mut_arg(false).unwrap_err();
+    err_disregard_result();
 }
 
 #[wrap_match::wrap_match(success_message = "success")]
@@ -98,5 +99,11 @@ fn err_mut_arg(mut arg1: bool) -> Result<(), CustomError> {
 
 #[wrap_match::wrap_match]
 fn err_ref_mut_arg(_arg1: &mut bool) -> Result<(), CustomError> {
+    Ok(())
+}
+
+#[wrap_match::wrap_match(disregard_result = true)]
+fn err_disregard_result() -> Result<(), CustomError> {
+    Err(CustomError::Error)?;
     Ok(())
 }

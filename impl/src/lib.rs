@@ -19,6 +19,7 @@ struct Options {
     error_message_without_info: String,
 
     log_success: bool,
+    disregard_result: bool,
 }
 
 impl Parse for Options {
@@ -29,6 +30,7 @@ impl Parse for Options {
             error_message_without_info: "An error occurred when running {function}: {error:?}".into(),
 
             log_success: true,
+            disregard_result: false,
         };
 
         while input.peek(Ident::peek_any) {
@@ -38,6 +40,7 @@ impl Parse for Options {
                 ErrorMessageWithoutInfo,
 
                 LogSuccess,
+                DisregardResult,
             }
             use OptionName::*;
 
@@ -49,6 +52,7 @@ impl Parse for Options {
                 "error_message_without_info" => ErrorMessageWithoutInfo,
 
                 "log_success" => LogSuccess,
+                "disregard_result" => DisregardResult,
 
                 _ => return Err(Error::new(name.span(), "wrap_match: unknown configuration option (expected `success_message`, `error_message`, `error_message_without_info`, or `log_success`)"))
             };
@@ -67,12 +71,13 @@ impl Parse for Options {
                         _ => unreachable!(),
                     }
                 }
-                LogSuccess => {
+                LogSuccess | DisregardResult => {
                     let value: LitBool = input.parse()?;
                     let value = value.value();
 
                     match option {
                         LogSuccess => options.log_success = value,
+                        DisregardResult => options.disregard_result = value,
                         _ => unreachable!(),
                     }
                 }
@@ -103,7 +108,11 @@ impl Fold for AddErrorInfo {
             .replace(' ', "")
             .replace(",/*WRAP_MATCH_SPACE*/", ", ");
         i.expr = parse_quote_spanned! {i.span()=>
-            #expr.map_err(|e| ::wrap_match::__private::WrapMatchError { line_and_expr: Some((::core::line!(), #expr_str.to_owned())), inner: e.into() })
+            #expr.map_err(|e| ::wrap_match::__private::WrapMatchError {
+                    line_and_expr: Some((::core::line!(), #expr_str.to_owned())),
+                    inner: e.into()
+                }
+            )
         };
         fold::fold_expr_try(self, i)
     }
@@ -200,7 +209,10 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let attrs = input.attrs.clone();
     let vis = input.vis.clone();
-    let sig = input.sig.clone();
+    let mut sig = input.sig.clone();
+    if options.disregard_result {
+        sig.output = ReturnType::Default;
+    }
 
     let orig_name = input.sig.ident.clone();
     let inner_name = format_ident!("_wrap_match_inner_{}", orig_name);
@@ -213,6 +225,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         // we also don't want the inner function to appear in docs or autocomplete (if they do, they should be deprecated and give a warning if they are used)
         parse_quote!(#[doc(hidden)]),
         parse_quote!(#[deprecated = "inner function for wrap-match. Please do not use!"]),
+        parse_quote!(#[allow(clippy::useless_conversion)]), // clippy will warn us for using .into() for every .map_err
     ];
 
     let success_message = options
@@ -245,10 +258,18 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         quote!()
     };
 
-    let success_log = if options.log_success {
-        quote!(::log::info!(#success_message);)
-    } else {
-        quote!()
+    let success_log = match options.log_success {
+        true => quote!(::log::info!(#success_message);),
+        false => quote!(),
+    };
+
+    let ok = match options.disregard_result {
+        false => quote!(Ok(r)),
+        true => quote!(),
+    };
+    let err = match options.disregard_result {
+        false => quote!(Err(e.inner)),
+        true => quote!(),
     };
 
     // for functions that take a self argument, we will need to put the inner function outside of our new function since we don't know what type self is
@@ -271,7 +292,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
             match #self_dot #inner_name(#(#args),*) #asyncness_await {
                 Ok(r) => {
                     #success_log
-                    Ok(r)
+                    #ok
                 }
                 Err(e) => {
                     if let Some((_line, _expr)) = e.line_and_expr {
@@ -279,7 +300,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
                     } else {
                         ::log::error!(#error_message_without_info, #error_message_without_info_format_parameters);
                     }
-                    Err(e.inner)
+                    #err
                 }
             }
         }
