@@ -188,16 +188,14 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let self_dot = if has_self_argument {
-        quote!(self.)
-    } else {
-        quote!()
+    let self_dot = match has_self_argument {
+        true => quote!(self.),
+        false => quote!(),
     };
 
-    let asyncness_await = if input.sig.asyncness.is_some() {
-        quote!(.await)
-    } else {
-        quote!()
+    let asyncness_await = match input.sig.asyncness {
+        Some(_) => quote!(.await),
+        None => quote!(),
     };
 
     let attrs = input.attrs.clone();
@@ -210,7 +208,12 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = AddErrorInfo.fold_item_fn(input);
     input.sig.ident = inner_name.clone();
     input.vis = Visibility::Inherited; // make sure the inner function isn't leaked to the public
-    input.attrs = vec![parse_quote!(#[doc(hidden)])]; // we will put the original attributes on the function we make (we also don't want the inner function to appear in docs or autocomplete)
+    input.attrs = vec![
+        // we will put the original attributes on the function we make
+        // we also don't want the inner function to appear in docs or autocomplete (if they do, they should be deprecated and give a warning if they are used)
+        parse_quote!(#[doc(hidden)]),
+        parse_quote!(#[deprecated = "inner function for wrap-match. Please do not use!"]),
+    ];
 
     let success_message = options
         .success_message
@@ -249,16 +252,8 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     // for functions that take a self argument, we will need to put the inner function outside of our new function since we don't know what type self is
-    let outer_input = if has_self_argument {
-        input.attrs.push(
-            parse_quote!(#[deprecated = "inner function for wrap-match. Please do not use!"]),
-        );
-        Some(&input)
-    } else {
-        None
-    };
-    let allow_deprecated = match has_self_argument {
-        true => Some(quote!(#[allow(deprecated)])),
+    let outer_input = match has_self_argument {
+        true => Some(&input),
         false => None,
     };
     let inner_input = match has_self_argument {
@@ -272,7 +267,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         #(#attrs)* #vis #sig {
             #inner_input
 
-            #allow_deprecated
+            #[allow(deprecated)]
             match #self_dot #inner_name(#(#args),*) #asyncness_await {
                 Ok(r) => {
                     #success_log

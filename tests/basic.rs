@@ -1,7 +1,5 @@
 use std::{error::Error, fmt::Debug};
 
-use futures_executor::block_on;
-
 #[test]
 fn basic_wrapper() {
     use env_logger::{Builder, Env};
@@ -11,8 +9,8 @@ fn basic_wrapper() {
     err().unwrap_err();
     dyn_error().unwrap_err();
     err_into(false, &false).unwrap_err();
-    block_on(unsafe { err_into_async_unsafe(false, false) }).unwrap_err();
-    generic::err_into_generic(false, false).unwrap_err();
+    pollster::block_on(unsafe { err_into_async_unsafe(false, false) }).unwrap_err();
+    generic::err_into_generic(false, &false).unwrap_err();
     Test::err().unwrap_err();
     Test.err_self().unwrap_err();
     err_mut_arg(false).unwrap_err();
@@ -49,13 +47,14 @@ fn err() -> Result<(), CustomError> {
 #[wrap_match::wrap_match]
 fn dyn_error() -> Result<(), Box<dyn Error>> {
     err()?;
+    Err(CustomError::Error)?; // this will never be triggered, just to ensure it compiles fine
     Ok(())
 }
 
 #[wrap_match::wrap_match(error_message = "test {function} {error:?} {expr}")]
 #[allow(clippy::let_unit_value)]
 fn err_into(_arg1: bool, _arg2: &bool) -> Result<(), CustomError> {
-    let _ = generic::err_into_generic(false, _arg2.to_owned())?;
+    let _ = generic::err_into_generic(false, _arg2)?;
     Ok(())
 }
 
@@ -68,7 +67,7 @@ mod generic {
     use super::*;
 
     #[wrap_match::wrap_match(error_message_without_info = "oh no an error occurred")]
-    pub fn err_into_generic<T>(_arg1: T, _arg2: bool) -> Result<(), CustomError> {
+    pub fn err_into_generic<T>(_arg1: T, _arg2: &bool) -> Result<(), CustomError> {
         Err(CustomError::Error.into())
     }
 }

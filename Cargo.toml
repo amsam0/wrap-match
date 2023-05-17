@@ -14,8 +14,8 @@ wrap-match-impl = { version = "=1.0.3", path = "impl" }
 
 [dev-dependencies]
 env_logger = "0.10"
-futures-executor = "0.3"
 log = "0.4"
+pollster = "0.3.0"
 trybuild = "1.0"
 
 [workspace]
