@@ -247,12 +247,12 @@ pub use wrap_match_impl::wrap_match;
 #[doc(hidden)]
 pub mod __private {
     #[doc(hidden)]
-    pub struct WrapMatchError<E> {
-        pub line_and_expr: Option<(u32, String)>,
+    pub struct WrapMatchError<'lt, E> {
+        pub line_and_expr: Option<(u32, &'lt str)>,
         pub inner: E,
     }
 
-    impl<E> From<E> for WrapMatchError<E> {
+    impl<E> From<E> for WrapMatchError<'_, E> {
         fn from(inner: E) -> Self {
             Self {
                 line_and_expr: None,

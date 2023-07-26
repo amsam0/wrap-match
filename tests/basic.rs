@@ -15,6 +15,8 @@ fn basic_wrapper() {
     Test.err_self().unwrap_err();
     err_mut_arg(false).unwrap_err();
     err_disregard_result();
+    err_lifetime().unwrap_err();
+    err_lifetime_generics("").unwrap_err();
 }
 
 #[wrap_match::wrap_match(success_message = "success")]
@@ -106,4 +108,16 @@ fn err_ref_mut_arg(_arg1: &mut bool) -> Result<(), CustomError> {
 fn err_disregard_result() -> Result<(), CustomError> {
     Err(CustomError::Error)?;
     Ok(())
+}
+
+#[wrap_match::wrap_match]
+fn err_lifetime<'lt>() -> Result<&'lt str, CustomError> {
+    Err(CustomError::Error)?;
+    Ok("")
+}
+
+#[wrap_match::wrap_match]
+fn err_lifetime_generics<'lt, ANY>(_any: ANY) -> Result<&'lt str, CustomError> {
+    Err(CustomError::Error)?;
+    Ok("")
 }

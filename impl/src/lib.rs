@@ -1,145 +1,23 @@
 //! Please see <https://docs.rs/wrap-match>
 
+#![allow(clippy::enum_glob_use, clippy::match_bool)]
+
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
-    ext::IdentExt,
-    fold::{self, Fold},
-    parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote, parse_quote_spanned,
-    spanned::Spanned,
-    Error, ExprTry, FnArg, ItemFn, LitBool, LitStr, Pat, PathArguments, ReturnType, Token, Type,
-    Visibility,
+    fold::Fold, parse_macro_input, parse_quote, spanned::Spanned, FnArg, ItemFn, Pat, ReturnType,
+    Type, Visibility,
 };
 
-struct Options {
-    success_message: String,
-    error_message: String,
-    error_message_without_info: String,
+mod add_error_info;
+use self::add_error_info::AddErrorInfo;
 
-    log_success: bool,
-    disregard_result: bool,
-}
-
-impl Parse for Options {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut options = Options {
-            success_message: "Successfully ran {function}".into(),
-            error_message: "An error occurred when running {function} (caused by `{expr}` on line {line}): {error:?}".into(),
-            error_message_without_info: "An error occurred when running {function}: {error:?}".into(),
-
-            log_success: true,
-            disregard_result: false,
-        };
-
-        while input.peek(Ident::peek_any) {
-            enum OptionName {
-                SuccessMessage,
-                ErrorMessage,
-                ErrorMessageWithoutInfo,
-
-                LogSuccess,
-                DisregardResult,
-            }
-            use OptionName::*;
-
-            let name: Ident = input.parse()?;
-
-            let option = match name.to_string().as_str() {
-                "success_message" => SuccessMessage,
-                "error_message" => ErrorMessage,
-                "error_message_without_info" => ErrorMessageWithoutInfo,
-
-                "log_success" => LogSuccess,
-                "disregard_result" => DisregardResult,
-
-                _ => return Err(Error::new(name.span(), "wrap_match: unknown configuration option (expected `success_message`, `error_message`, `error_message_without_info`, or `log_success`)"))
-            };
-
-            let _: Token![=] = input.parse()?;
-
-            match option {
-                SuccessMessage | ErrorMessage | ErrorMessageWithoutInfo => {
-                    let value: LitStr = input.parse()?;
-                    let value = value.value();
-
-                    match option {
-                        SuccessMessage => options.success_message = value,
-                        ErrorMessage => options.error_message = value,
-                        ErrorMessageWithoutInfo => options.error_message_without_info = value,
-                        _ => unreachable!(),
-                    }
-                }
-                LogSuccess | DisregardResult => {
-                    let value: LitBool = input.parse()?;
-                    let value = value.value();
-
-                    match option {
-                        LogSuccess => options.log_success = value,
-                        DisregardResult => options.disregard_result = value,
-                        _ => unreachable!(),
-                    }
-                }
-            }
-
-            // remove the next comma so we can parse an ident
-            if input.peek(Token![,]) {
-                let _: Token![,] = input.parse()?;
-            }
-        }
-
-        Ok(options)
-    }
-}
-
-struct AddErrorInfo;
-
-impl Fold for AddErrorInfo {
-    fn fold_expr_try(&mut self, mut i: ExprTry) -> ExprTry {
-        // Adds error metadata (line number and expression that caused it) to try expressions
-        let expr = *i.expr.clone();
-        let expr_str = &expr
-            .to_token_stream()
-            .to_string()
-            // there probably won't be any spaces in the expression, converting token stream to string adds unnecessary spaces
-            // however, we need to catch parameters
-            .replace(", ", ",/*WRAP_MATCH_SPACE*/")
-            .replace(' ', "")
-            .replace(",/*WRAP_MATCH_SPACE*/", ", ");
-        i.expr = parse_quote_spanned! {i.span()=>
-            #expr.map_err(|e| ::wrap_match::__private::WrapMatchError {
-                    line_and_expr: Some((::core::line!(), #expr_str.to_owned())),
-                    inner: e.into()
-                }
-            )
-        };
-        fold::fold_expr_try(self, i)
-    }
-
-    fn fold_return_type(&mut self, i: ReturnType) -> ReturnType {
-        match i {
-            ReturnType::Default => fold::fold_return_type(self, i),
-            ReturnType::Type(arrow, ty) => {
-                let mut ty = *ty;
-                // Change the Result error type to use our special error
-                if let Type::Path(p) = &mut ty {
-                    for segment in &mut p.path.segments {
-                        if segment.ident.to_string().contains("Result") {
-                            if let PathArguments::AngleBracketed(args) = &mut segment.arguments {
-                                let err_type = args.args.pop().unwrap().value().clone();
-                                args.args.push(parse_quote!(::wrap_match::__private::WrapMatchError<#err_type>));
-                            }
-                        }
-                    }
-                }
-                fold::fold_return_type(self, ReturnType::Type(arrow, Box::new(ty)))
-            }
-        }
-    }
-}
+mod options;
+use self::options::Options;
 
 #[proc_macro_attribute]
+/// See crate level documentation for usage
 pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     let options = parse_macro_input!(args as Options);
     let input = parse_macro_input!(input as ItemFn);
@@ -151,8 +29,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
                 .path
                 .segments
                 .last()
-                .map(|s| !s.ident.to_string().contains("Result"))
-                .unwrap_or(true),
+                .map_or(true, |s| !s.ident.to_string().contains("Result")),
             _ => true,
         },
     } {
@@ -226,15 +103,16 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         parse_quote!(#[doc(hidden)]),
         parse_quote!(#[deprecated = "inner function for wrap-match. Please do not use!"]),
         parse_quote!(#[allow(clippy::useless_conversion)]), // clippy will warn us for using .into() for every .map_err
+        parse_quote!(#[inline(always)]), // let's make sure we don't produce more overhead than we need to, the output should produce similar assembly to the input (besides the end)
     ];
 
     let success_message = options
         .success_message
-        .replace("{function}", &format!("{}", orig_name));
+        .replace("{function}", &format!("{orig_name}"));
 
     let error_message = options
         .error_message
-        .replace("{function}", &format!("{}", orig_name));
+        .replace("{function}", &format!("{orig_name}"));
     let mut error_message_format_parameters = vec![];
     if error_message.contains("{line}") {
         error_message_format_parameters.push(quote!(line = _line));
@@ -242,16 +120,20 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     if error_message.contains("{expr}") {
         error_message_format_parameters.push(quote!(expr = _expr));
     }
-    if error_message.contains("{error}") || error_message.contains("{error:?}") {
+    if error_message.contains("{error}")
+        || error_message.contains("{error:?}")
+        || error_message.contains("{error:#?}")
+    {
         error_message_format_parameters.push(quote!(error = e.inner));
     }
 
     let error_message_without_info = options
         .error_message_without_info
-        .replace("{function}", &format!("{}", orig_name));
+        .replace("{function}", &format!("{orig_name}"));
     let error_message_without_info_format_parameters = if error_message_without_info
         .contains("{error}")
         || error_message_without_info.contains("{error:?}")
+        || error_message_without_info.contains("{error:#?}")
     {
         quote!(error = e.inner)
     } else {
