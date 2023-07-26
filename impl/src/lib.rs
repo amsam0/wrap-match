@@ -53,7 +53,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut has_self_argument = false;
     // remove types from args for use when calling the inner function
-    let args: Vec<TokenStream2> = input
+    let args_without_types: Vec<TokenStream2> = input
         .sig
         .inputs
         .iter()
@@ -155,13 +155,9 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     // for functions that take a self argument, we will need to put the inner function outside of our new function since we don't know what type self is
-    let outer_input = match has_self_argument {
-        true => Some(&input),
-        false => None,
-    };
-    let inner_input = match has_self_argument {
-        true => None,
-        false => Some(&input),
+    let (outer_input, inner_input) = match has_self_argument {
+        true => (Some(input), None),
+        false => (None, Some(input)),
     };
 
     quote! {
@@ -171,7 +167,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
             #inner_input
 
             #[allow(deprecated)]
-            match #self_dot #inner_name(#(#args),*) #asyncness_await {
+            match #self_dot #inner_name(#(#args_without_types),*) #asyncness_await {
                 Ok(r) => {
                     #success_log
                     #ok
