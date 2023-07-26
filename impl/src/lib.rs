@@ -39,7 +39,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
             input.sig.span()
         };
         return quote_spanned! {span=>
-            compile_error!("wrap_match currently only supports functions that return Results");
+            compile_error!("wrap_match currently only supports functions that return `Result`s");
         }
         .into();
     }
@@ -74,9 +74,10 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let self_dot = match has_self_argument {
-        true => quote!(self.),
-        false => quote!(),
+    let self_dot = if has_self_argument {
+        quote!(self.)
+    } else {
+        quote!()
     };
 
     let asyncness_await = match input.sig.asyncness {
@@ -140,24 +141,28 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         quote!()
     };
 
-    let success_log = match options.log_success {
-        true => quote!(::log::info!(#success_message);),
-        false => quote!(),
+    let success_log = if options.log_success {
+        quote!(::log::info!(#success_message);)
+    } else {
+        quote!()
     };
 
-    let ok = match options.disregard_result {
-        false => quote!(Ok(r)),
-        true => quote!(),
+    let ok = if !options.disregard_result {
+        quote!(Ok(r))
+    } else {
+        quote!()
     };
-    let err = match options.disregard_result {
-        false => quote!(Err(e.inner)),
-        true => quote!(),
+    let err = if !options.disregard_result {
+        quote!(Err(e.inner))
+    } else {
+        quote!()
     };
 
     // for functions that take a self argument, we will need to put the inner function outside of our new function since we don't know what type self is
-    let (outer_input, inner_input) = match has_self_argument {
-        true => (Some(input), None),
-        false => (None, Some(input)),
+    let (outer_input, inner_input) = if has_self_argument {
+        (Some(input), None)
+    } else {
+        (None, Some(input))
     };
 
     quote! {
