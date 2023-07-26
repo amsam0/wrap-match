@@ -109,11 +109,11 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let success_message = options
         .success_message
-        .replace("{function}", &format!("{orig_name}"));
+        .replace("{function}", &orig_name.to_string());
 
     let error_message = options
         .error_message
-        .replace("{function}", &format!("{orig_name}"));
+        .replace("{function}", &orig_name.to_string());
     let mut error_message_format_parameters = vec![];
     if error_message.contains("{line}") {
         error_message_format_parameters.push(quote!(line = _line));
@@ -130,15 +130,15 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let error_message_without_info = options
         .error_message_without_info
-        .replace("{function}", &format!("{orig_name}"));
-    let error_message_without_info_format_parameters = if error_message_without_info
-        .contains("{error}")
+        .replace("{function}", &orig_name.to_string());
+    let mut error_message_without_info_format_parameters = vec![];
+    if error_message_without_info.contains("{error}")
         || error_message_without_info.contains("{error:?}")
         || error_message_without_info.contains("{error:#?}")
     {
-        quote!(error = e.inner)
+        error_message_without_info_format_parameters.push(quote!(error = e.inner));
     } else {
-        quote!()
+        error_message_without_info_format_parameters.push(quote!());
     };
 
     let success_log = if options.log_success {
@@ -181,7 +181,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
                     if let Some((_line, _expr)) = e.line_and_expr {
                         ::log::error!(#error_message, #(#error_message_format_parameters),*);
                     } else {
-                        ::log::error!(#error_message_without_info, #error_message_without_info_format_parameters);
+                        ::log::error!(#error_message_without_info, #(#error_message_without_info_format_parameters),*);
                     }
                     #err
                 }
