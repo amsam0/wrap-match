@@ -11,7 +11,8 @@ pub struct AddErrorInfo;
 impl Fold for AddErrorInfo {
     fn fold_expr_try(&mut self, mut i: ExprTry) -> ExprTry {
         // Adds error metadata (line number and expression that caused it) to try expressions
-        let expr = *i.expr.clone();
+        let span = i.span();
+        let expr = *i.expr;
         let expr_str = &expr
             .to_token_stream()
             .to_string()
@@ -20,7 +21,7 @@ impl Fold for AddErrorInfo {
             .replace(", ", ",/*WRAP_MATCH_SPACE*/")
             .replace(' ', "")
             .replace(",/*WRAP_MATCH_SPACE*/", ", ");
-        i.expr = parse_quote_spanned! {i.span()=>
+        i.expr = parse_quote_spanned! {span=>
             #expr.map_err(|e| ::wrap_match::__private::WrapMatchError {
                     line_and_expr: Some((::core::line!(), #expr_str)),
                     inner: e.into()
@@ -52,7 +53,8 @@ impl Fold for AddErrorInfo {
     }
 
     fn fold_generics(&mut self, mut i: Generics) -> Generics {
+        // Add the lifetime `WrapMatchError`s will use
         i.params.insert(0, parse_quote!('_wrap_match_error));
-        i
+        fold::fold_generics(self, i)
     }
 }

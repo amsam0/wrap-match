@@ -221,7 +221,7 @@ wrap-match currently has the following limitations:
 1.  wrap-match only supports `Result`s. If you need support for `Option`s, please create a GitHub issue with your use case.
 
 1.  `error_message` and `error_message_without_info` only support formatting `error` using the `Debug` or `Display` formatters. This is because of how we determine what formatting specifiers are used.
-    If you need support for other formatting specifiers (such as `:#?`), please create a GitHub issue with your use case.
+    If you need support for other formatting specifiers, please create a GitHub issue with your use case.
 
 1.  wrap-match cannot be used on `const` functions. This is because the `log` crate cannot be used in `const` contexts.
 

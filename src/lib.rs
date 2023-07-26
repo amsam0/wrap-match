@@ -53,7 +53,7 @@ fn my_function() -> Result<(), CustomError> {
             .map_err(|e| WrapMatchError {
                 // Here, line number and expression are added to the error
                 line_and_expr: Some((3, "Err(CustomError::Error)".to_owned())),
-                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type (however, we need to disable the `clippy::useless_conversion` lint for the entire function to allow this)
+                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type (however, we need to disable the `clippy::useless_conversion` lint to allow this)
             })?;
         // If you need to return an error, just do `Err(CustomError::Error.into())`
         Ok(())
@@ -233,7 +233,7 @@ wrap-match currently has the following limitations:
 1.  wrap-match only supports `Result`s. If you need support for `Option`s, please create a GitHub issue with your use case.
 
 1.  `error_message` and `error_message_without_info` only support formatting `error` using the `Debug` or `Display` formatters. This is because of how we determine what formatting specifiers are used.
-    If you need support for other formatting specifiers (such as `:#?`), please create a GitHub issue with your use case.
+    If you need support for other formatting specifiers, please create a GitHub issue with your use case.
 
 1.  wrap-match cannot be used on `const` functions. This is because the `log` crate cannot be used in `const` contexts.
 
