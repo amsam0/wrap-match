@@ -1,6 +1,6 @@
 //! Please see <https://docs.rs/wrap-match>
 
-#![allow(clippy::enum_glob_use, clippy::match_bool)]
+#![allow(clippy::enum_glob_use, clippy::match_bool, clippy::if_not_else)]
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -17,6 +17,7 @@ mod options;
 use self::options::Options;
 
 #[proc_macro_attribute]
+#[allow(clippy::too_many_lines)]
 /// See crate level documentation for usage
 pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     let options = parse_macro_input!(args as Options);

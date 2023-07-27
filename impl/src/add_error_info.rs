@@ -9,18 +9,30 @@ use syn::{
 pub struct AddErrorInfo;
 
 impl Fold for AddErrorInfo {
+    /// Adds error metadata/info (line number and expression that caused it) to try expressions
     fn fold_expr_try(&mut self, mut i: ExprTry) -> ExprTry {
-        // Adds error metadata (line number and expression that caused it) to try expressions
         let span = i.span();
         let expr = *i.expr;
-        let expr_str = &expr
-            .to_token_stream()
-            .to_string()
-            // there probably won't be any spaces in the expression, converting token stream to string adds unnecessary spaces
-            // however, we need to catch parameters
-            .replace(", ", ",/*WRAP_MATCH_SPACE*/")
-            .replace(' ', "")
-            .replace(",/*WRAP_MATCH_SPACE*/", ", ");
+        let expr_str = {
+            // https://github.com/dtolnay/prettyplease/issues/57
+            // https://github.com/dtolnay/prettyplease/issues/5
+            let lines: Vec<_> = prettyplease::unparse(
+                &syn::parse_file(&format!("fn main() {{\n{}\n}}", expr.to_token_stream()))
+                    .expect("invalid expression? something made syn fail to parse the file"),
+            )
+            .trim()
+            .split('\n')
+            .map(|line| {
+                let mut line = line.to_owned();
+                // Remove the first indent, if there is one
+                if line.starts_with("    ") {
+                    line.drain(..4);
+                }
+                line
+            })
+            .collect();
+            lines[1..(lines.len() - 1)].join("\n")
+        };
         i.expr = parse_quote_spanned! {span=>
             #expr.map_err(|e| ::wrap_match::__private::WrapMatchError {
                     line_and_expr: Some((::core::line!(), #expr_str)),
@@ -31,12 +43,12 @@ impl Fold for AddErrorInfo {
         fold::fold_expr_try(self, i)
     }
 
+    /// Changes the Result error type to use our special error
     fn fold_return_type(&mut self, i: ReturnType) -> ReturnType {
         match i {
             ReturnType::Default => fold::fold_return_type(self, i),
             ReturnType::Type(arrow, ty) => {
                 let mut ty = *ty;
-                // Change the Result error type to use our special error
                 if let Type::Path(p) = &mut ty {
                     for segment in &mut p.path.segments {
                         if segment.ident.to_string().contains("Result") {
@@ -52,8 +64,8 @@ impl Fold for AddErrorInfo {
         }
     }
 
+    /// Add the lifetime `WrapMatchError`s will use
     fn fold_generics(&mut self, mut i: Generics) -> Generics {
-        // Add the lifetime `WrapMatchError`s will use
         i.params.insert(0, parse_quote!('_wrap_match_error));
         fold::fold_generics(self, i)
     }
