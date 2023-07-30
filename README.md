@@ -88,7 +88,7 @@ wrap-match allows the user to customize success and error messages, as well as c
 
 The message that's logged on success.
 
-Available format specifiers:
+Available format parameters:
 
 -   `{function}`: The original function name.
 
@@ -113,7 +113,7 @@ This would log:
 
 The message that's logged on error, when line and expression info **is** available. Currently, this is only for try expressions (expressions with a `?` after them).
 
-Available format specifiers:
+Available format parameters:
 
 -   `{function}`: The original function name.
 -   `{line}`: The line the error occurred on.
@@ -142,7 +142,7 @@ This would log:
 
 The message that's logged on error, when line and expression info **is not** available. This is usually triggered if you return an error yourself and use `.into()`.
 
-Available format specifiers:
+Available format parameters:
 
 -   `{function}`: The original function name.
 -   `{error}` or `{error:?}`: The error.
