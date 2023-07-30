@@ -36,6 +36,7 @@ impl Fold for AddErrorInfo {
         i.expr = parse_quote_spanned! {span=>
             #expr.map_err(|e| ::wrap_match::__private::WrapMatchError {
                     line_and_expr: Some((::core::line!(), #expr_str)),
+                    #[allow(clippy::useless_conversion)]
                     inner: e.into()
                 }
             )

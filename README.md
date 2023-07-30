@@ -39,7 +39,7 @@ fn my_function() -> Result<(), CustomError> {
 }
 ```
 
-This would expand to something like this (comments are not included normally):
+This would expand to something like this (comments are not included normally, and some of the output is simplified; use `cargo-expand` if you are curious what the macro really expands to):
 
 ```rust
 fn my_function() -> Result<(), CustomError> {
@@ -49,7 +49,7 @@ fn my_function() -> Result<(), CustomError> {
             .map_err(|e| WrapMatchError {
                 // Here, line number and expression are added to the error
                 line_and_expr: Some((3, "Err(CustomError::Error)")),
-                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type (however, we need to disable the `clippy::useless_conversion` lint to allow this)
+                inner: e.into(), // This is so you can have `Box<dyn Error>` as your error type
             })?;
         // If you need to return an error, just do `Err(CustomError::Error.into())`
         Ok(())

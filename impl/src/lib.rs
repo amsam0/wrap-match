@@ -104,7 +104,6 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         // we also don't want the inner function to appear in docs or autocomplete (if they do, they should be deprecated and give a warning if they are used)
         parse_quote!(#[doc(hidden)]),
         parse_quote!(#[deprecated = "inner function for wrap-match. Please do not use!"]),
-        parse_quote!(#[allow(clippy::useless_conversion)]), // clippy will warn us for using .into() for every .map_err
         parse_quote!(#[inline(always)]), // let's make sure we don't produce more overhead than we need to, the output should produce similar assembly to the input (besides the end)
     ];
 
