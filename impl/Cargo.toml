@@ -9,6 +9,10 @@ version.workspace = true
 edition = "2021"
 license = "MIT"
 
+[features]
+default = []
+tracing = []
+
 [dependencies]
 prettyplease = "0.2"
 proc-macro2 = "1.0"

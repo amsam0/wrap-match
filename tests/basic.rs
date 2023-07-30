@@ -2,8 +2,7 @@ use std::{error::Error, fmt::Debug};
 
 #[test]
 fn basic_wrapper() {
-    use env_logger::{Builder, Env};
-    Builder::from_env(Env::default().default_filter_or("trace")).init();
+    tracing_subscriber::fmt::init();
     ok().unwrap();
     silent_ok().unwrap();
     err().unwrap_err();
@@ -20,7 +19,9 @@ fn basic_wrapper() {
 }
 
 #[wrap_match::wrap_match(success_message = "success")]
+#[tracing::instrument]
 fn ok() -> Result<(), ()> {
+    tracing::info!("hello from tracing!");
     Ok(())
 }
 

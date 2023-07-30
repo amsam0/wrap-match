@@ -9,12 +9,14 @@ This results in extremely verbose code. It's a pain to write and maintain.
 wrap-match is an attribute macro that wraps your function in a `match` statement. Additionally, **it attaches rich error information to all statements using the `?` operator (aka try expressions).**
 This allows you to know exactly what line and expression caused the error.
 
+wrap-match supports both `log` and `tracing`. It defaults to `log`, but it will use `tracing` if the `tracing` feature is enabled. See [`tracing` support](#tracing-support) for more info.
+
 > **Note**
 >
-> wrap-match uses the `log` crate to log success and error messages. It does not expose the log crate for expanded functions to use; you must depend on it yourself.
+> wrap-match uses the `log` or `tracing` crate to log success and error messages. It does not expose the `log` or `tracing` crate for expanded functions to use; you must depend on them yourself.
 >
-> Additionally, **no messages will appear unless you use a logging implementation.** I recommend `env_logger`, but you can find a full list
-> [here](https://docs.rs/log/#available-logging-implementations).
+> Additionally, **no messages will appear unless you use a logging implementation or `tracing` subscriber.** For `log`, I recommend `env_logger`, but you can find a full list
+> [here](https://docs.rs/log/#available-logging-implementations). For `tracing`, I recommend `tracing-subscriber`, but you can find a full list [here](https://docs.rs//tracing/#related-crates).
 
 ## Example
 
@@ -22,10 +24,17 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
+# For log users:
 wrap-match = "1"
 log = "*"
 # You'll also want a logging implementation, for example `env_logger`
 # More info here: https://docs.rs/log/#available-logging-implementations
+
+# For tracing users:
+wrap-match = { version = "1", features = ["tracing"] }
+tracing = "0.1"
+# You'll also want a `tracing` subscriber, for example `tracing-subscriber`
+# More info here: https://docs.rs//tracing/#related-crates
 ```
 
 Now you can use the `wrap_match` attribute macro:
@@ -57,14 +66,14 @@ fn my_function() -> Result<(), CustomError> {
 
     match _wrap_match_inner_my_function() {
         Ok(r) => {
-            ::log::info!("Successfully ran my_function");
+            ::log::info!("Successfully ran my_function"); // when the tracing feature is enabled, it will use tracing macros instead
             Ok(r)
         }
         Err(e) => {
             if let Some((_line, _expr)) = e.line_and_expr {
-                ::log::error!("An error occurred when running my_function (when running `{_expr}` on line {_line}): {:?}", e.inner);
+                ::log::error!("An error occurred when running my_function (when running `{_expr}` on line {_line}): {:?}", e.inner); // when the tracing feature is enabled, it will use tracing macros instead
             } else {
-                ::log::error!("An error occurred when running my_function: {:?}", e.inner);
+                ::log::error!("An error occurred when running my_function: {:?}", e.inner); // when the tracing feature is enabled, it will use tracing macros instead
             }
             Err(e.inner)
         }
@@ -79,6 +88,24 @@ If we run this code, it would log this:
 ```
 
 As you can see, wrap-match makes error logging extremely easy while still logging information like what caused the error.
+
+## `tracing` support
+
+Added in wrap-match 1.0.5, wrap-match supports `tracing` if the `tracing` feature is enabled. wrap-match **does not** do anything with spans. Additionally, you will not be able to manually create
+spans in functions you use wrap-match on. This is because the span will be dropped before wrap-match logs anything.
+
+To put both the function and wrap-match logs in a span, you have to use the `tracing::instrument` attribute macro. The ordering of the attribute macros is important; **it must go after wrap-match**.
+
+Example:
+
+```rust
+#[wrap_match::wrap_match(success_message = "still in span!")]
+#[tracing::instrument]
+fn tracing_example() -> Result<(), ()> {
+    tracing::info!("hello from tracing!");
+    Ok(())
+}
+```
 
 ## Customization
 

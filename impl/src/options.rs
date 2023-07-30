@@ -46,7 +46,7 @@ impl Parse for Options {
                 "log_success" => LogSuccess,
                 "disregard_result" => DisregardResult,
 
-                _ => return Err(Error::new(name.span(), "[wrap_match] unknown configuration option (expected `success_message`, `error_message`, `error_message_without_info`, or `log_success`)"))
+                _ => return Err(Error::new(name.span(), "wrap_match: unknown configuration option (expected `success_message`, `error_message`, `error_message_without_info`, or `log_success`)"))
             };
 
             let _: Token![=] = input.parse()?;

@@ -141,8 +141,13 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         error_message_without_info_format_parameters.push(quote!());
     };
 
+    #[cfg(not(feature = "tracing"))]
+    let logging_crate = quote!(log);
+    #[cfg(feature = "tracing")]
+    let logging_crate = quote!(tracing);
+
     let success_log = if options.log_success {
-        quote!(::log::info!(#success_message);)
+        quote!(::#logging_crate::info!(#success_message);)
     } else {
         quote!()
     };
@@ -179,9 +184,9 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
                 }
                 Err(e) => {
                     if let Some((_line, _expr)) = e.line_and_expr {
-                        ::log::error!(#error_message, #(#error_message_format_parameters),*);
+                        ::#logging_crate::error!(#error_message, #(#error_message_format_parameters),*);
                     } else {
-                        ::log::error!(#error_message_without_info, #(#error_message_without_info_format_parameters),*);
+                        ::#logging_crate::error!(#error_message_without_info, #(#error_message_without_info_format_parameters),*);
                     }
                     #err
                 }

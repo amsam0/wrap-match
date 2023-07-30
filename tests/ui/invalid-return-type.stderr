@@ -1,4 +1,4 @@
-error: wrap_match currently only supports functions that return Results
+error: wrap_match currently only supports functions that return `Result`s
  --> tests/ui/invalid-return-type.rs:4:29
   |
 4 | fn invalid_return_type() -> Option<()> {
