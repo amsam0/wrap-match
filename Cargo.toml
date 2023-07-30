@@ -5,18 +5,21 @@ authors = ["naturecodevoid"]
 homepage = "https://github.com/naturecodevoid/wrap-match"
 repository = "https://github.com/naturecodevoid/wrap-match"
 documentation = "https://docs.rs/wrap-match"
-version = "1.0.4"
+version.workspace = true
 edition = "2021"
 license = "MIT"
-
-[dependencies]
-wrap-match-impl = { version = "=1.0.4", path = "impl" }
 
 [dev-dependencies]
 env_logger = "0.10"
 log = "0.4"
 pollster = "0.3.0"
+tracing = { version = "0.1.37", features = ["log"] }
 trybuild = "1.0"
 
 [workspace]
 members = ["impl"]
+package.version = "1.0.4"
+
+[dependencies.wrap-match-impl]
+path = "impl"
+version = "=1.0.4"
