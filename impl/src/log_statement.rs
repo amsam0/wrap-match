@@ -7,14 +7,7 @@ pub fn build_log_statement(
     other_parameters: &Vec<TokenStream2>,
     level: TokenStream2,
 ) -> TokenStream2 {
-    #[cfg(not(feature = "tracing"))]
-    let logging_crate = quote!(log);
-    #[cfg(feature = "tracing")]
-    let logging_crate = quote!(tracing);
-
-    let mut parameters = vec![];
-
-    fn contains_parameter(input: &String, parameter_name: impl AsRef<str>) -> bool {
+    fn contains_parameter(input: &str, parameter_name: impl AsRef<str>) -> bool {
         let parameter_name = parameter_name.as_ref();
         // These are all of the basic formats, and I don't really want to implement this: https://doc.rust-lang.org/stable/std/fmt/index.html#syntax
         input.contains(&format!("{{{parameter_name}}}"))
@@ -31,9 +24,16 @@ pub fn build_log_statement(
             || input.contains(&format!("{{{parameter_name}:E}}"))
     }
 
+    #[cfg(not(feature = "tracing"))]
+    let logging_crate = quote!(log);
+    #[cfg(feature = "tracing")]
+    let logging_crate = quote!(tracing);
+
+    let mut parameters = vec![];
+
     for (parameter_name, parameter_var_name) in builtin_parameters {
         if contains_parameter(input, parameter_name) {
-            let parameter_name = Ident::new(&parameter_name, Span::call_site());
+            let parameter_name = Ident::new(parameter_name, Span::call_site());
             parameters.push(quote!(#parameter_name = #parameter_var_name));
         }
     }

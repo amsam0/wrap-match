@@ -1,6 +1,13 @@
 //! Please see <https://docs.rs/wrap-match>
 
-#![allow(clippy::enum_glob_use, clippy::match_bool, clippy::if_not_else)]
+#![allow(
+    clippy::enum_glob_use,
+    clippy::match_bool,
+    clippy::if_not_else,
+    clippy::module_name_repetitions,
+    clippy::needless_pass_by_value,
+    clippy::implicit_clone
+)]
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
