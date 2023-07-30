@@ -3,7 +3,7 @@ use std::{error::Error, fmt::Debug};
 #[test]
 fn basic_wrapper() {
     tracing_subscriber::fmt::init();
-    ok().unwrap();
+    ok(1).unwrap();
     silent_ok().unwrap();
     err().unwrap_err();
     dyn_error().unwrap_err();
@@ -18,9 +18,9 @@ fn basic_wrapper() {
     err_lifetime_generics("").unwrap_err();
 }
 
-#[wrap_match::wrap_match(success_message = "success")]
+#[wrap_match::wrap_match(success_message = "success {_a}")]
 #[tracing::instrument]
-fn ok() -> Result<(), ()> {
+fn ok(_a: i64) -> Result<(), ()> {
     tracing::info!("hello from tracing!");
     Ok(())
 }

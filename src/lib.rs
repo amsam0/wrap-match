@@ -102,8 +102,8 @@ Example:
 
 ```
 #[wrap_match::wrap_match(success_message = "still in span!")]
-#[tracing::instrument]
-fn tracing_example() -> Result<(), ()> {
+#[tracing::instrument] // IMPORTANT: after wrap-match!
+fn my_function() -> Result<(), ()> {
     tracing::info!("hello from tracing!");
     Ok(())
 }
@@ -119,7 +119,8 @@ The message that's logged on success.
 
 Available format parameters:
 
--   `{function}`: The original function name.
+-   `function`: The original function name. **Note**: You can only use `{function}`; other formats such as `{function:?}` are not supported.
+-   [Function arguments](#using-function-arguments-in-messages)
 
 Default value: `Successfully ran {function}`
 
@@ -145,10 +146,11 @@ The message that's logged on error, when line and expression info **is** availab
 
 Available format parameters:
 
--   `{function}`: The original function name.
--   `{line}`: The line the error occurred on.
--   `{expr}`: The expression that caused the error.
--   `{error}` or `{error:?}`: The error.
+-   `function`: The original function name. **Note**: You can only use `{function}`; other formats such as `{function:?}` are not supported.
+-   `line`: The line the error occurred on.
+-   `expr`: The expression that caused the error.
+-   `error`: The error.
+-   [Function arguments](#using-function-arguments-in-messages)
 
 Default value: `` An error occurred when running {function} (caused by `{expr}` on line {line}): {error:?} ``
 
@@ -175,8 +177,9 @@ The message that's logged on error, when line and expression info **is not** ava
 
 Available format parameters:
 
--   `{function}`: The original function name.
--   `{error}` or `{error:?}`: The error.
+-   `function`: The original function name. **Note**: You can only use `{function}`; other formats such as `{function:?}` are not supported.
+-   `error`: The error.
+-   [Function arguments](#using-function-arguments-in-messages)
 
 Default value: `An error occurred when running {function}: {error:?}`
 
@@ -244,6 +247,19 @@ fn main() {
 }
 ```
 
+## Using function arguments in messages
+
+As of wrap-match 1.0.5, you can use function arguments in messages, as long as they weren't moved/dropped. You should only use this for references and items that implement `Copy`.
+
+Example:
+
+```rust
+#[wrap_match::wrap_match(success_message = "Success! input = {input}")]
+fn my_function(input: i64) -> Result<i64, ()> {
+    Ok(input)
+}
+```
+
 ## Limitations
 
 wrap-match currently has the following limitations:
@@ -254,8 +270,9 @@ wrap-match currently has the following limitations:
 
 1.  wrap-match only supports `Result`s. If you need support for `Option`s, please create a GitHub issue with your use case.
 
-1.  `error_message` and `error_message_without_info` only support formatting `error` using the `Debug` or `Display` formatters. This is because of how we determine what formatting specifiers are used.
-    If you need support for other formatting specifiers, please create a GitHub issue with your use case.
+1.  ~~`error_message` and `error_message_without_info` only support formatting `error` using the `Debug` or `Display` formatters. This is because of how we determine what formatting specifiers are
+    used. If you need support for other formatting specifiers, please create a GitHub issue with your use case.~~ All format parameters (except `function`) now support all basic formats that `format!`
+    supports (however, features such as precision, sign, fill, alignment and with will most likely never be supported)..
 
 1.  wrap-match cannot be used on `const` functions. This is because the `log` crate cannot be used in `const` contexts.
 

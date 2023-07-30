@@ -1,4 +1,4 @@
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -6,20 +6,30 @@ use syn::{
 };
 
 pub struct Options {
-    pub success_message: String,
-    pub error_message: String,
-    pub error_message_without_info: String,
+    pub success_message: (String, Span),
+    pub error_message: (String, Span),
+    pub error_message_without_info: (String, Span),
 
     pub log_success: bool,
     pub disregard_result: bool,
 }
 
+impl Options {
+    #[rustfmt::skip]
+    /// Replaces {function} in the messages with the function name at compile time
+    pub fn replace_function_in_messages(&mut self, orig_name: String) {
+        self.success_message.0 = self.success_message.0.replace("{function}", &orig_name);
+        self.error_message.0 = self.error_message.0.replace("{function}", &orig_name);
+        self.error_message_without_info.0 = self.error_message_without_info.0.replace("{function}", &orig_name);
+    }
+}
+
 impl Parse for Options {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut options = Options {
-            success_message: "Successfully ran {function}".to_owned(),
-            error_message: "An error occurred when running {function} (caused by `{expr}` on line {line}): {error:?}".to_owned(),
-            error_message_without_info: "An error occurred when running {function}: {error:?}".to_owned(),
+            success_message: ("Successfully ran {function}".to_owned(), Span::call_site()),
+            error_message: ("An error occurred when running {function} (caused by `{expr}` on line {line}): {error:?}".to_owned(), Span::call_site()),
+            error_message_without_info: ("An error occurred when running {function}: {error:?}".to_owned(), Span::call_site()),
 
             log_success: true,
             disregard_result: false,
@@ -54,7 +64,7 @@ impl Parse for Options {
             match option {
                 SuccessMessage | ErrorMessage | ErrorMessageWithoutInfo => {
                     let value: LitStr = input.parse()?;
-                    let value = value.value();
+                    let value = (value.value(), value.span());
 
                     match option {
                         SuccessMessage => options.success_message = value,

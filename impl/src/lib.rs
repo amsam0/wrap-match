@@ -3,7 +3,6 @@
 #![allow(clippy::enum_glob_use, clippy::match_bool, clippy::if_not_else)]
 
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
     fold::Fold, parse_macro_input, parse_quote, spanned::Spanned, FnArg, ItemFn, Pat, ReturnType,
@@ -16,11 +15,14 @@ use self::add_error_info::AddErrorInfo;
 mod options;
 use self::options::Options;
 
+mod log_statement;
+use self::log_statement::build_log_statement;
+
 #[proc_macro_attribute]
 #[allow(clippy::too_many_lines)]
 /// See crate level documentation for usage
 pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
-    let options = parse_macro_input!(args as Options);
+    let mut options = parse_macro_input!(args as Options);
     let input = parse_macro_input!(input as ItemFn);
 
     if match input.sig.output {
@@ -54,26 +56,27 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut has_self_argument = false;
     // remove types from args for use when calling the inner function
-    let args_without_types: Vec<TokenStream2> = input
-        .sig
-        .inputs
-        .iter()
-        .map(|a| match a {
+    let mut args_without_types = vec![];
+    let mut args_without_types_including_self = vec![];
+    for arg in &input.sig.inputs {
+        match arg {
             FnArg::Receiver(_) => {
                 has_self_argument = true;
-                quote!()
+                args_without_types_including_self.push(quote!(self));
             }
-            FnArg::Typed(a) => {
-                if let Pat::Ident(mut a) = *a.pat.clone() {
+            FnArg::Typed(arg) => {
+                let tokens = if let Pat::Ident(mut a) = *arg.pat.clone() {
                     a.attrs.clear();
                     a.mutability = None;
                     a.into_token_stream()
                 } else {
-                    a.pat.clone().into_token_stream()
-                }
+                    arg.pat.clone().into_token_stream()
+                };
+                args_without_types.push(tokens.clone());
+                args_without_types_including_self.push(tokens);
             }
-        })
-        .collect();
+        }
+    }
 
     let self_dot = if has_self_argument {
         quote!(self.)
@@ -94,6 +97,7 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     let orig_name = input.sig.ident.clone();
+    options.replace_function_in_messages(orig_name.to_string());
     let inner_name = format_ident!("_wrap_match_inner_{}", orig_name);
 
     let mut input = AddErrorInfo.fold_item_fn(input);
@@ -107,50 +111,30 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         parse_quote!(#[inline(always)]), // let's make sure we don't produce more overhead than we need to, the output should produce similar assembly to the input (besides the end)
     ];
 
-    let success_message = options
-        .success_message
-        .replace("{function}", &orig_name.to_string());
+    let log_success = build_log_statement(
+        &options.success_message,
+        &[],
+        &args_without_types_including_self,
+        quote!(info),
+    );
 
-    let error_message = options
-        .error_message
-        .replace("{function}", &orig_name.to_string());
-    let mut error_message_format_parameters = vec![];
-    if error_message.contains("{line}") {
-        error_message_format_parameters.push(quote!(line = _line));
-    }
-    if error_message.contains("{expr}") {
-        error_message_format_parameters.push(quote!(expr = _expr));
-    }
-    if error_message.contains("{error}")
-        || error_message.contains("{error:?}")
-        || error_message.contains("{error:#?}")
-    {
-        error_message_format_parameters.push(quote!(error = e.inner));
-    }
+    let log_error = build_log_statement(
+        &options.error_message,
+        &[
+            ("line", quote!(_line)),
+            ("expr", quote!(_expr)),
+            ("error", quote!(e.inner)),
+        ],
+        &args_without_types_including_self,
+        quote!(error),
+    );
 
-    let error_message_without_info = options
-        .error_message_without_info
-        .replace("{function}", &orig_name.to_string());
-    let mut error_message_without_info_format_parameters = vec![];
-    if error_message_without_info.contains("{error}")
-        || error_message_without_info.contains("{error:?}")
-        || error_message_without_info.contains("{error:#?}")
-    {
-        error_message_without_info_format_parameters.push(quote!(error = e.inner));
-    } else {
-        error_message_without_info_format_parameters.push(quote!());
-    };
-
-    #[cfg(not(feature = "tracing"))]
-    let logging_crate = quote!(log);
-    #[cfg(feature = "tracing")]
-    let logging_crate = quote!(tracing);
-
-    let success_log = if options.log_success {
-        quote!(::#logging_crate::info!(#success_message);)
-    } else {
-        quote!()
-    };
+    let log_error_without_info = build_log_statement(
+        &options.error_message_without_info,
+        &[("error", quote!(e.inner))],
+        &args_without_types_including_self,
+        quote!(error),
+    );
 
     let ok = if !options.disregard_result {
         quote!(Ok(r))
@@ -179,14 +163,14 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
             #[allow(deprecated)]
             match #self_dot #inner_name(#(#args_without_types),*) #asyncness_await {
                 Ok(r) => {
-                    #success_log
+                    #log_success
                     #ok
                 }
                 Err(e) => {
                     if let Some((_line, _expr)) = e.line_and_expr {
-                        ::#logging_crate::error!(#error_message, #(#error_message_format_parameters),*);
+                        #log_error
                     } else {
-                        ::#logging_crate::error!(#error_message_without_info, #(#error_message_without_info_format_parameters),*);
+                        #log_error_without_info
                     }
                     #err
                 }
