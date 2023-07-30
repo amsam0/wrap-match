@@ -265,7 +265,7 @@ wrap-match currently has the following limitations:
 
 1.  ~~`error_message` and `error_message_without_info` only support formatting `error` using the `Debug` or `Display` formatters. This is because of how we determine what formatting specifiers are
     used. If you need support for other formatting specifiers, please create a GitHub issue with your use case.~~ All format parameters (except `function`) now support all basic formats that `format!`
-    supports (however, features such as precision, sign, fill, alignment and with will most likely never be supported).
+    supports (however, features such as precision, sign, fill, alignment and width will most likely never be supported).
 
 1.  wrap-match cannot be used on `const` functions. This is because the `log` crate cannot be used in `const` contexts.
 
