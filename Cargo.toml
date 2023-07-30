@@ -22,8 +22,8 @@ trybuild = "1.0"
 
 [workspace]
 members = ["impl"]
-package.version = "1.0.4"
+package.version = "1.0.5"
 
 [dependencies.wrap-match-impl]
 path = "impl"
-version = "=1.0.4"
+version = "=1.0.5"
