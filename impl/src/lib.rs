@@ -118,12 +118,16 @@ pub fn wrap_match(args: TokenStream, input: TokenStream) -> TokenStream {
         parse_quote!(#[inline(always)]), // let's make sure we don't produce more overhead than we need to, the output should produce similar assembly to the input (besides the end)
     ];
 
-    let log_success = build_log_statement(
-        &options.success_message,
-        &[],
-        &args_without_types_including_self,
-        quote!(info),
-    );
+    let log_success = if options.log_success {
+        Some(build_log_statement(
+            &options.success_message,
+            &[],
+            &args_without_types_including_self,
+            quote!(info),
+        ))
+    } else {
+        None
+    };
 
     let log_error = build_log_statement(
         &options.error_message,
