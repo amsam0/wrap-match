@@ -21,7 +21,7 @@ impl Fold for AddErrorInfo {
                     .expect("invalid expression? something made syn fail to parse the file"),
             )
             .trim()
-            .split('\n')
+            .lines()
             .map(|line| {
                 let mut line = line.to_owned();
                 // Remove the first indent, if there is one
